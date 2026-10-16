@@ -1,0 +1,43 @@
+rules_version = '2';
+// Reglas de Firestore · Monitoreo RSVR Switch Ass'y (HPM-RSVR-Switch-Assy-01)
+// Solo sesiones autenticadas (inicio de sesión anónimo desde el monitor) pueden leer y escribir.
+// Nadie puede borrar alarmas ni causas desde el monitor: la evidencia queda íntegra.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /rsvr_config/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    match /rsvr_causas/{docId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.resource.data.causa is string
+        && request.resource.data.causa.size() > 0
+        && request.resource.data.causa.size() < 2000;
+      allow delete: if false;
+    }
+    match /rsvr_alarmas/{docId} {
+      allow read, create, update: if request.auth != null;
+      allow delete: if false;
+    }
+    // Estación: índice por día y contenido de los CSV publicados por la PC de la máquina
+    match /rsvr_dias/{docId} {
+      allow read, create, update: if request.auth != null;
+      allow delete: if false;
+    }
+    match /rsvr_csv/{docId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.resource.data.text is string
+        && request.resource.data.text.size() < 1000000;
+      allow delete: if false;
+    }
+    // Señal de vida de la estación (la consulta muestra si la PC de piso está publicando)
+    match /rsvr_estado/{docId} {
+      allow read, create, update: if request.auth != null;
+      allow delete: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
